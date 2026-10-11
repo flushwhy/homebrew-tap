@@ -1,0 +1,40 @@
+name: Update fe Homebrew formula
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tap
+        uses: actions/checkout@v4
+
+      - name: Fetch latest fe release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/flushwhy/fe/releases/latest > release.json
+
+      - name: Update formula from release assets
+        run: ruby scripts/update-fe-formula.rb release.json
+
+      - name: Create pull request if formula changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          branch: automation/update-fe-formula
+          delete-branch: true
+          commit-message: "Update fe Homebrew formula"
+          title: "Update fe Homebrew formula"
+          body: |
+            Automated update of `Formula/fe.rb` from the latest published
+            release of [flushwhy/fe](https://github.com/flushwhy/fe).
+
+            Release asset URLs and SHA-256 digests are read from GitHub release
+            metadata. Please review before merging.
