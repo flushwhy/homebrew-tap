@@ -6,8 +6,8 @@ release_path = ARGV.fetch(0)
 release = JSON.parse(File.read(release_path))
 abort "Latest release is a draft or prerelease" if release["draft"] || release["prerelease"]
 
-version = release.fetch("tag_name").sub(/\\Av/, "")
-abort "Unexpected version tag: #{version}" unless version.match?(/\\A\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?\\z/)
+version = release.fetch("tag_name").sub(/\Av/, "")
+abort "Unexpected version tag: #{version}" unless version.match?(/\A\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\z/)
 
 assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
 required = {
@@ -19,7 +19,7 @@ required.each do |name, platform|
   asset = assets[name]
   abort "Release #{version} is missing required asset #{name} (#{platform})" unless asset
   digest = asset["digest"]
-  abort "Asset #{name} has no GitHub SHA-256 digest; refusing to guess" unless digest&.match?(/\\Asha256:[0-9a-f]{64}\\z/)
+  abort "Asset #{name} has no GitHub SHA-256 digest; refusing to guess" unless digest&.match?(/\Asha256:[0-9a-f]{64}\z/)
 end
 
 intel = assets.fetch("fe-macos-x64")
@@ -43,7 +43,7 @@ formula = <<~RUBY
     end
 
     test do
-      assert_match "fe", shell_output("#{bin}/fe --help")
+      assert_match "fe", shell_output("\#{bin}/fe --help")
     end
   end
 RUBY
