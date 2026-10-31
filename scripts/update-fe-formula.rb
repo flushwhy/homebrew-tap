@@ -11,7 +11,7 @@ abort "Unexpected version tag: #{version}" unless version.match?(/\A\d+\.\d+\.\d
 
 assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
 required = {
-  "fe-macos-x64" => "Intel macOS",
+  "fe-macos-amd64" => "Intel macOS",
   "fe-macos-arm64" => "Apple Silicon macOS"
 }
 
@@ -22,7 +22,7 @@ required.each do |name, platform|
   abort "Asset #{name} has no GitHub SHA-256 digest; refusing to guess" unless digest&.match?(/\Asha256:[0-9a-f]{64}\z/)
 end
 
-intel = assets.fetch("fe-macos-x64")
+intel = assets.fetch("fe-macos-amd64")
 arm = assets.fetch("fe-macos-arm64")
 formula = <<~RUBY
   class Fe < Formula
