@@ -37,7 +37,9 @@ def formula_for(release, class_name:, versioned: false)
 
   lines = []
   lines << "class #{class_name} < Formula"
-  lines << "  desc \"CLI tool for managing and releasing projects\""
+  description = "CLI tool for managing and releasing projects"
+  description += " (#{version.split(".").first(2).join(".")} maintenance line)" if versioned
+  lines << "  desc \"#{description}\""
   lines << "  homepage \"https://github.com/flushwhy/fe\""
   lines << "  version \"#{version}\""
   lines << ""
