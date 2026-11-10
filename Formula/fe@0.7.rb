@@ -4,7 +4,6 @@ class FeAT07 < Formula
   version "0.7.0"
 
   keg_only :versioned_formula
-
   url "https://github.com/flushwhy/fe/releases/download/v0.7.0/fe-macos-x64"
   sha256 "2afb73b3c78135baf14ce4037c3033726a577e18f41e1450f67d7e1e9c89f706"
 

@@ -4,7 +4,6 @@ class FeAT08 < Formula
   version "0.8.3"
 
   keg_only :versioned_formula
-
   url "https://github.com/flushwhy/fe/releases/download/v0.8.3/fe-macos-amd64"
   sha256 "78ce317360ca18fdce89b7e83eaa9898e116d20e589da9e551fbd2684eb70e19"
 
