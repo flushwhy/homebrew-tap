@@ -3,7 +3,7 @@
 require "json"
 
 VERSIONED_LINES = %w[0.7 0.8].freeze
-RELEASE_TAG = /\\Av?(\\d+)\\.(\\d+)\\.(\\d+)\\z/
+RELEASE_TAG = /\Av?(\d+)\.(\d+)\.(\d+)\z/
 
 releases = JSON.parse(File.read(ARGV.fetch(0)))
 stable = releases.reject { |release| release["draft"] || release["prerelease"] }.filter_map do |release|
@@ -18,14 +18,14 @@ def version_key(release)
 end
 
 def formula_for(release, class_name:, versioned: false)
-  version = release.fetch("tag_name").sub(/\\Av/, "")
+  version = release.fetch("tag_name").sub(/\Av/, "")
   assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
 
   intel = assets["fe-macos-amd64"] || assets["fe-macos-x64"]
   arm = assets["fe-macos-arm64"]
   { "fe-macos-amd64 or fe-macos-x64" => intel, "fe-macos-arm64" => arm }.each do |name, asset|
     abort "#{release.fetch("tag_name")} is missing #{name}" unless asset
-    abort "#{name} has no verified SHA-256 digest" unless asset["digest"]&.match?(/\\Asha256:[0-9a-f]{64}\\z/)
+    abort "#{name} has no verified SHA-256 digest" unless asset["digest"]&.match?(/\Asha256:[0-9a-f]{64}\z/)
   end
 
   lines = []
@@ -48,10 +48,10 @@ def formula_for(release, class_name:, versioned: false)
   lines << "  end"
   lines << ""
   lines << "  test do"
-  lines << "    assert_match \"fe\", shell_output(\"#{bin}/fe --help\")"
+  lines << '    assert_match "fe", shell_output("#{bin}/fe --help")'
   lines << "  end"
   lines << "end"
-  lines.join("\\n") + "\\n"
+  lines.join("\n") + "\n"
 end
 
 abort "No stable semantic-versioned Fe releases found" if stable.empty?
