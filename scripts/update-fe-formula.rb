@@ -1,57 +1,86 @@
 #!/usr/bin/env ruby
-# Update Formula/fe.rb using GitHub's published release metadata.
+# Update Fe's stable and versioned Homebrew formulae from GitHub releases.
 require "json"
 
-release_path = ARGV.fetch(0)
-release = JSON.parse(File.read(release_path))
-abort "Latest release is a draft or prerelease" if release["draft"] || release["prerelease"]
+VERSIONED_LINE_LIMIT = 4
+RELEASE_TAG = /\Av?(\d+)\.(\d+)\.(\d+)\z/
+SHA256 = /\Asha256:[0-9a-f]{64}\z/
 
-version = release.fetch("tag_name").sub(/\Av/, "")
-abort "Unexpected version tag: #{version}" unless version.match?(/\A\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\z/)
+releases = JSON.parse(File.read(ARGV.fetch(0)))
+stable = releases.reject { |release| release["draft"] || release["prerelease"] }.filter_map do |release|
+  match = RELEASE_TAG.match(release.fetch("tag_name"))
+  next unless match
 
-assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
-required = {
-  "fe-macos-amd64" => "Intel macOS",
-  "fe-macos-arm64" => "Apple Silicon macOS"
-}
-
-required.each do |name, platform|
-  asset = assets[name]
-  abort "Release #{version} is missing required asset #{name} (#{platform})" unless asset
-  digest = asset["digest"]
-  abort "Asset #{name} has no GitHub SHA-256 digest; refusing to guess" unless digest&.match?(/\Asha256:[0-9a-f]{64}\z/)
+  release.merge("_version_parts" => match.captures.map(&:to_i))
 end
 
-intel = assets.fetch("fe-macos-amd64")
-arm = assets.fetch("fe-macos-arm64")
-formula = <<~RUBY
-  class Fe < Formula
-    desc "CLI tool for managing and releasing projects"
-    homepage "https://github.com/flushwhy/fe"
-    version "#{version}"
+def version_key(release)
+  release.fetch("_version_parts")
+end
 
-    url "#{intel.fetch("browser_download_url")}"
-    sha256 "#{intel.fetch("digest").delete_prefix("sha256:")}"
+# Some older stable tags were published without macOS assets. Keep the newest
+# release that Homebrew can actually install for each minor line.
+installable = stable.select do |release|
+  assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
+  intel = assets["fe-macos-amd64"] || assets["fe-macos-x64"]
+  arm = assets["fe-macos-arm64"]
+  valid = [intel, arm].all? { |asset| asset && asset["digest"]&.match?(SHA256) }
+  puts "Skipping #{release.fetch("tag_name")}: missing macOS assets or SHA-256 digests" unless valid
+  valid
+end
 
-    on_arm do
-      url "#{arm.fetch("browser_download_url")}"
-      sha256 "#{arm.fetch("digest").delete_prefix("sha256:")}"
-    end
+def formula_for(release, class_name:, versioned: false)
+  version = release.fetch("tag_name").sub(/\Av/, "")
+  assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
+  intel = assets["fe-macos-amd64"] || assets["fe-macos-x64"]
+  arm = assets.fetch("fe-macos-arm64")
 
-    def install
-      bin.install Dir["fe-macos-*"].first => "fe"
-    end
+  lines = []
+  lines << "class #{class_name} < Formula"
+  description = "CLI tool for managing and releasing projects"
+  description += " (#{version.split(".").first(2).join(".")} maintenance line)" if versioned
+  lines << "  desc \"#{description}\""
+  lines << "  homepage \"https://github.com/flushwhy/fe\""
+  lines << "  version \"#{version}\""
+  lines << ""
+  lines << "  keg_only :versioned_formula" if versioned
+  lines << "  url \"#{intel.fetch("browser_download_url")}\""
+  lines << "  sha256 \"#{intel.fetch("digest").delete_prefix("sha256:")}\""
+  lines << ""
+  lines << "  on_arm do"
+  lines << "    url \"#{arm.fetch("browser_download_url")}\""
+  lines << "    sha256 \"#{arm.fetch("digest").delete_prefix("sha256:")}\""
+  lines << "  end"
+  lines << ""
+  lines << "  def install"
+  lines << "    bin.install Dir[\"fe-macos-*\"].first => \"fe\""
+  lines << "  end"
+  lines << ""
+  lines << "  test do"
+  lines << '    assert_match "fe", shell_output("#{bin}/fe --help")'
+  lines << "  end"
+  lines << "end"
+  lines.join("\n") + "\n"
+end
 
-    test do
-      assert_match "fe", shell_output("\#{bin}/fe --help")
-    end
-  end
-RUBY
+abort "No installable stable Fe releases found" if installable.empty?
+latest = installable.max_by { |release| version_key(release) }
+File.write("Formula/fe.rb", formula_for(latest, class_name: "Fe"))
+puts "Updated Formula/fe.rb to #{latest.fetch("tag_name")}"
 
-path = "Formula/fe.rb"
-unless File.exist?(path) && File.read(path) == formula
-  File.write(path, formula)
-  puts "Updated #{path} to fe #{version}"
-else
-  puts "Formula already matches fe #{version}"
+version_lines = installable.map { |release| release.fetch("_version_parts").first(2) }.uniq.sort.last(VERSIONED_LINE_LIMIT)
+keep_paths = version_lines.map do |major, minor|
+  release = installable.select { |item| item.fetch("_version_parts").first(2) == [major, minor] }
+                       .max_by { |item| version_key(item) }
+  line = "#{major}.#{minor}"
+  suffix = "#{major}#{minor}"
+  path = "Formula/fe@#{line}.rb"
+  File.write(path, formula_for(release, class_name: "FeAT#{suffix}", versioned: true))
+  puts "Updated #{path} to #{release.fetch("tag_name")}"
+  path
+end
+
+(Dir.glob("Formula/fe@*.rb") - keep_paths).each do |path|
+  File.delete(path)
+  puts "Removed obsolete formula #{path}"
 end
