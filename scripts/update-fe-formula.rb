@@ -2,7 +2,7 @@
 # Update Fe's stable and versioned Homebrew formulae from GitHub releases.
 require "json"
 
-VERSIONED_LINES = %w[0.7 0.8].freeze
+VERSIONED_LINE_LIMIT = 4
 RELEASE_TAG = /\Av?(\d+)\.(\d+)\.(\d+)\z/
 
 releases = JSON.parse(File.read(ARGV.fetch(0)))
@@ -59,13 +59,19 @@ latest = stable.max_by { |release| version_key(release) }
 File.write("Formula/fe.rb", formula_for(latest, class_name: "Fe"))
 puts "Updated Formula/fe.rb to #{latest.fetch("tag_name")}"
 
-VERSIONED_LINES.each do |line|
-  release = stable.select { |item| item.fetch("_version_parts").first(2).join(".") == line }
+version_lines = stable.map { |release| release.fetch("_version_parts").first(2) }.uniq.sort.last(VERSIONED_LINE_LIMIT)
+keep_paths = version_lines.map do |major, minor|
+  line = "#{major}.#{minor}"
+  release = stable.select { |item| item.fetch("_version_parts").first(2) == [major, minor] }
                   .max_by { |item| version_key(item) }
-  abort "No stable release found for maintenance line #{line}" unless release
-
-  suffix = line.split(".").map(&:to_i).join
+  suffix = "#{major}#{minor}"
   path = "Formula/fe@#{line}.rb"
   File.write(path, formula_for(release, class_name: "FeAT#{suffix}", versioned: true))
   puts "Updated #{path} to #{release.fetch("tag_name")}"
+  path
+end
+
+(Dir.glob("Formula/fe@*.rb") - keep_paths).each do |path|
+  File.delete(path)
+  puts "Removed obsolete formula #{path}"
 end
