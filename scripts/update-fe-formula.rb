@@ -4,6 +4,7 @@ require "json"
 
 VERSIONED_LINE_LIMIT = 4
 RELEASE_TAG = /\Av?(\d+)\.(\d+)\.(\d+)\z/
+SHA256 = /\Asha256:[0-9a-f]{64}\z/
 
 releases = JSON.parse(File.read(ARGV.fetch(0)))
 stable = releases.reject { |release| release["draft"] || release["prerelease"] }.filter_map do |release|
@@ -17,16 +18,22 @@ def version_key(release)
   release.fetch("_version_parts")
 end
 
+# Some older stable tags were published without macOS assets. Keep the newest
+# release that Homebrew can actually install for each minor line.
+installable = stable.select do |release|
+  assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
+  intel = assets["fe-macos-amd64"] || assets["fe-macos-x64"]
+  arm = assets["fe-macos-arm64"]
+  valid = [intel, arm].all? { |asset| asset && asset["digest"]&.match?(SHA256) }
+  puts "Skipping #{release.fetch("tag_name")}: missing macOS assets or SHA-256 digests" unless valid
+  valid
+end
+
 def formula_for(release, class_name:, versioned: false)
   version = release.fetch("tag_name").sub(/\Av/, "")
   assets = release.fetch("assets").to_h { |asset| [asset.fetch("name"), asset] }
-
   intel = assets["fe-macos-amd64"] || assets["fe-macos-x64"]
-  arm = assets["fe-macos-arm64"]
-  { "fe-macos-amd64 or fe-macos-x64" => intel, "fe-macos-arm64" => arm }.each do |name, asset|
-    abort "#{release.fetch("tag_name")} is missing #{name}" unless asset
-    abort "#{name} has no verified SHA-256 digest" unless asset["digest"]&.match?(/\Asha256:[0-9a-f]{64}\z/)
-  end
+  arm = assets.fetch("fe-macos-arm64")
 
   lines = []
   lines << "class #{class_name} < Formula"
@@ -54,16 +61,16 @@ def formula_for(release, class_name:, versioned: false)
   lines.join("\n") + "\n"
 end
 
-abort "No stable semantic-versioned Fe releases found" if stable.empty?
-latest = stable.max_by { |release| version_key(release) }
+abort "No installable stable Fe releases found" if installable.empty?
+latest = installable.max_by { |release| version_key(release) }
 File.write("Formula/fe.rb", formula_for(latest, class_name: "Fe"))
 puts "Updated Formula/fe.rb to #{latest.fetch("tag_name")}"
 
-version_lines = stable.map { |release| release.fetch("_version_parts").first(2) }.uniq.sort.last(VERSIONED_LINE_LIMIT)
+version_lines = installable.map { |release| release.fetch("_version_parts").first(2) }.uniq.sort.last(VERSIONED_LINE_LIMIT)
 keep_paths = version_lines.map do |major, minor|
+  release = installable.select { |item| item.fetch("_version_parts").first(2) == [major, minor] }
+                       .max_by { |item| version_key(item) }
   line = "#{major}.#{minor}"
-  release = stable.select { |item| item.fetch("_version_parts").first(2) == [major, minor] }
-                  .max_by { |item| version_key(item) }
   suffix = "#{major}#{minor}"
   path = "Formula/fe@#{line}.rb"
   File.write(path, formula_for(release, class_name: "FeAT#{suffix}", versioned: true))
