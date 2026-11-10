@@ -19,10 +19,10 @@ jobs:
       - name: Fetch stable and maintenance release metadata
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api "repos/flushwhy/fe/releases?per_page=100" > releases.json
+        run: gh api "repos/flushwhy/fe/releases?per_page=100" > release.json
 
       - name: Update formulae from release assets
-        run: ruby scripts/update-fe-formula.rb releases.json
+        run: ruby scripts/update-fe-formula.rb release.json
 
       - name: Create pull request if formulae changed
         uses: peter-evans/create-pull-request@v7
