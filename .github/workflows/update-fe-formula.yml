@@ -1,4 +1,4 @@
-name: Update fe Homebrew formula
+name: Update Fe Homebrew formulae
 
 on:
   workflow_dispatch:
@@ -16,25 +16,26 @@ jobs:
       - name: Check out tap
         uses: actions/checkout@v4
 
-      - name: Fetch latest fe release metadata
+      - name: Fetch stable and maintenance release metadata
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api repos/flushwhy/fe/releases/latest > release.json
+        run: gh api "repos/flushwhy/fe/releases?per_page=100" > releases.json
 
-      - name: Update formula from release assets
-        run: ruby scripts/update-fe-formula.rb release.json
+      - name: Update formulae from release assets
+        run: ruby scripts/update-fe-formula.rb releases.json
 
-      - name: Create pull request if formula changed
+      - name: Create pull request if formulae changed
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ github.token }}
           branch: automation/update-fe-formula
           delete-branch: true
-          commit-message: "Update fe Homebrew formula"
-          title: "Update fe Homebrew formula"
+          commit-message: "Update Fe Homebrew formulae"
+          title: "Update Fe Homebrew formulae"
           body: |
-            Automated update of `Formula/fe.rb` from the latest published
-            release of [flushwhy/fe](https://github.com/flushwhy/fe).
+            Automated update of Fe's stable and versioned Homebrew formulae.
 
-            Release asset URLs and SHA-256 digests are read from GitHub release
-            metadata. Please review before merging.
+            The main formula tracks the newest stable release. Versioned formulae
+            track the newest patch release in their respective maintenance lines.
+            Asset URLs and SHA-256 digests are read from GitHub release metadata.
+            Please review before merging.
