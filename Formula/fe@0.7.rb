@@ -1,15 +1,15 @@
 class FeAT07 < Formula
   desc "CLI tool for managing and releasing projects (0.7 maintenance line)"
   homepage "https://github.com/flushwhy/fe"
-  version "0.7.5"
+  version "0.7.6"
 
   keg_only :versioned_formula
-  url "https://github.com/flushwhy/fe/releases/download/v0.7.5/fe-macos-amd64"
-  sha256 "93f1ea6dfc246c32dd4b39b5d64b3add723f63f52ada0d9aa332f35246d047c5"
+  url "https://github.com/flushwhy/fe/releases/download/v0.7.6/fe-macos-amd64"
+  sha256 "c722567ccaeb562b88780ec88b9debd155e1a5e31506aa6c7eeec7e23297bb05"
 
   on_arm do
-    url "https://github.com/flushwhy/fe/releases/download/v0.7.5/fe-macos-arm64"
-    sha256 "6841d6381abc056783e89b0cac60ef0e133ad1bbfd428a84264ffec6507b735e"
+    url "https://github.com/flushwhy/fe/releases/download/v0.7.6/fe-macos-arm64"
+    sha256 "da5540b1a138b5ae89f97bee69e0b05367513a2260b270fcbc3efa6363ae7a06"
   end
 
   def install

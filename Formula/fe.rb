@@ -1,14 +1,14 @@
 class Fe < Formula
   desc "CLI tool for managing and releasing projects"
   homepage "https://github.com/flushwhy/fe"
-  version "0.8.5"
+  version "0.8.6"
 
-  url "https://github.com/flushwhy/fe/releases/download/v0.8.5/fe-macos-amd64"
-  sha256 "c6eee587f67447b4e5f640700ed5d3827db55587ad90f9b47768466792175674"
+  url "https://github.com/flushwhy/fe/releases/download/v0.8.6/fe-macos-amd64"
+  sha256 "0afd3b21711f2377f2a0e08a6dc3583ba432bea32aa2735f32bc49752295ac57"
 
   on_arm do
-    url "https://github.com/flushwhy/fe/releases/download/v0.8.5/fe-macos-arm64"
-    sha256 "3b189902fd9583f6ec26a58994f102b4e8276454a4319e6c5abdacb923761558"
+    url "https://github.com/flushwhy/fe/releases/download/v0.8.6/fe-macos-arm64"
+    sha256 "8fdb18a8f4d2bc8641e3eb1e6d81e6f79336b6d801328f5a27f50035b37d30ab"
   end
 
   def install
